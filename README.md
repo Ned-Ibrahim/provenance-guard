@@ -98,7 +98,7 @@ The full diagram lives in [planning.md](planning.md#architecture).
 
 ### Signal 1: LLM classification (Groq, llama-3.3-70b-versatile)
 
-**What it measures:** a holistic, semantics-aware judgment of whether the text reads as AI-generated: stock transitions, hedged both-sides framing, uniform rhythm, absence of lived specificity.
+**What it measures:** a whole-passage, semantics-aware judgment of whether the text reads as AI-generated: stock transitions, hedged both-sides framing, uniform rhythm, absence of lived specificity.
 The prompt explicitly instructs the model that formal register alone is not proof of AI, to reduce bias against academic and non-native writers.
 It runs at temperature 0 with JSON-mode output and returns a 0 to 1 score plus a one-sentence rationale that is stored for reviewers.
 
@@ -111,9 +111,9 @@ Formal-but-human prose looks AI-ish to it, lightly humanized AI output can fool 
 
 **What it measures:** three surface statistics, each normalized so 1.0 reads as AI-like, then averaged:
 
-- **Burstiness**: coefficient of variation of sentence lengths. Humans mix short and long sentences; AI output is metronomic.
-- **Type-token ratio**: vocabulary diversity over the first 200 words, mapped so a clean mid-high band reads AI-like while heavy repetition or very rich vocabulary reads human.
-- **Informality**: density of informal markers per 100 words (contractions, ellipses, interrobangs, shouting caps, lowercase sentence starts, interjections). AI defaults to clean standard punctuation.
+- Burstiness: coefficient of variation of sentence lengths. Humans mix short and long sentences; AI output is metronomic.
+- Type-token ratio: vocabulary diversity over the first 200 words, mapped so a clean mid-high band reads AI-like while heavy repetition or very rich vocabulary reads human.
+- Informality: density of informal markers per 100 words (contractions, ellipses, interrobangs, shouting caps, lowercase sentence starts, interjections). AI defaults to clean standard punctuation.
 
 **Why chosen:** it is genuinely independent of the LLM signal (structural rather than semantic), costs nothing, cannot go down, and its three sub-metrics are individually logged so a surprising verdict can be traced to the specific metric that drove it.
 
