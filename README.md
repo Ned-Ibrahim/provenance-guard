@@ -44,8 +44,8 @@ Real output recorded during the project's manual testing (details under [Validat
 ## Run locally
 
 ```bash
-git clone https://github.com/Ned-Ibrahim/ai201-project4-provenance-guard.git
-cd ai201-project4-provenance-guard
+git clone https://github.com/Ned-Ibrahim/provenance-guard.git
+cd provenance-guard
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
