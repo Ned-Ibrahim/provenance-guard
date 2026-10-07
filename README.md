@@ -1,23 +1,66 @@
 # Provenance Guard
 
-A backend system that a creative sharing platform can plug into to classify submitted writing as AI-generated or human-written, score its confidence honestly, surface a plain-language transparency label to readers, and handle appeals from creators who believe they were misclassified.
+A Flask backend that classifies submitted writing as likely AI, likely human, or uncertain, with a confidence score, a plain-language label, and an appeals workflow.
 
-Built with Flask, Groq (llama-3.3-70b-versatile), pure-Python stylometrics, Flask-Limiter, and SQLite.
-See [planning.md](planning.md) for the full pre-implementation spec.
+Built for CodePath AI201 (project 4), 2026.
+Stack: Flask, Groq (llama-3.3-70b-versatile), pure-Python stylometrics, Flask-Limiter, SQLite.
+The pre-implementation spec is in [planning.md](planning.md).
 
-## Setup
+## How it works
+
+```mermaid
+flowchart TD
+    A[POST /submit<br/>text, creator_id] --> B{Valid JSON,<br/>80+ chars,<br/>rate limit ok?}
+    B -- no --> E[400 / 429]
+    B -- yes --> C[llm_signal<br/>Groq, score 0 to 1]
+    B -- yes --> D[stylometric_signal<br/>burstiness, TTR, informality]
+    C --> F[combine_signals<br/>0.65 LLM + 0.35 stylometry,<br/>pulled toward 0.5 on disagreement]
+    D --> F
+    C -. LLM unavailable .-> G[stylometry only,<br/>clamped to 0.35 to 0.65]
+    G --> F
+    F --> H{confidence}
+    H -- ">= 0.75" --> I[likely_ai]
+    H -- "0.40 to 0.75" --> J[uncertain]
+    H -- "<= 0.40" --> K[likely_human]
+    I --> L[label + SQLite record<br/>+ audit_log: classification]
+    J --> L
+    K --> L
+    L --> M[POST /appeal<br/>content_id, creator_id, reasoning]
+    M --> N{Exists, same creator,<br/>no open appeal?}
+    N -- no --> O[404 / 403 / 409]
+    N -- yes --> P[status = under_review<br/>audit_log: appeal + original decision snapshot]
+```
+
+## Example
+
+Real output recorded during the project's manual testing (details under [Validation](#validation-real-scores-from-testing)):
+
+| Input | LLM | Stylometric | Confidence | Attribution |
+|---|---|---|---|---|
+| Template AI prose | 0.9 | 0.5829 | 0.789 | likely_ai |
+| Lightly humanized wellness paragraph | 0.6 | 0.7165 | 0.6408 | uncertain |
+| Casual first-person restaurant rant | 0.2 | 0.1502 | 0.1826 | likely_human |
+
+## Run locally
 
 ```bash
 git clone https://github.com/Ned-Ibrahim/ai201-project4-provenance-guard.git
 cd ai201-project4-provenance-guard
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-echo "GROQ_API_KEY=your_key_here" > .env
-python app.py   # serves on http://localhost:5001
+export GROQ_API_KEY=...   # or put GROQ_API_KEY in a .env file
+python app.py             # http://localhost:5001
 ```
 
-Port 5001 is used instead of 5000 because macOS AirPlay Receiver often occupies 5000.
+The only environment variable is `GROQ_API_KEY`.
+Without it the LLM signal reports as unavailable and the system falls back to a hedged stylometry-only score.
+
+## Tests
+
+There is no automated test suite yet.
+Verification so far was manual (curl against every error path, an appeal round trip, and a rate-limit run), documented below.
+For that reason there is no CI workflow.
 
 ## Demo UI
 
@@ -271,3 +314,7 @@ scoring.py      signal fusion, thresholds, label text
 storage.py      SQLite persistence: contents table + append-only audit_log
 planning.md     pre-implementation spec and architecture diagram
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
